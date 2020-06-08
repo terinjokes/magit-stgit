@@ -62,6 +62,7 @@
 
 (require 'magit)
 (require 'magit-popup)
+(require 'transient)
 
 ;;; Options
 ;;;; Variables
@@ -87,6 +88,11 @@
 
 (defcustom magit-stgit-mode-lighter " Stg"
   "Mode-line lighter for Magit-Stgit mode."
+  :group 'magit-stgit
+  :type 'string)
+
+(defcustom magit-stgit-suffix "/"
+  "Suffix key for magit-stgit."
   :group 'magit-stgit
   :type 'string)
 
@@ -252,32 +258,28 @@ Else, asks the user for a patch name."
 
 ;;; Commands
 
-(magit-define-popup magit-stgit-popup
-  "Popup console for StGit commands."
-  'magit-stgit-commands
-  :actions '((?i  "Init"     magit-stgit-init)
-             ;;
-             (?N  "New"      magit-stgit-new-popup)
-             (?n  "Rename"   magit-stgit-rename)
-             (?e  "Edit"     magit-stgit-edit-popup)
-             (?c  "Commit"   magit-stgit-commit-popup)
-             (?C  "Uncommit" magit-stgit-uncommit-popup)
-             (?k  "Delete"   magit-stgit-delete-popup)
-             ;;
-             (?f  "Float"    magit-stgit-float-popup)
-             (?s  "Sink"     magit-stgit-sink-popup)
-             ;;
-             (?\r "Show"     magit-stgit-show)
-             (?a  "Goto"     magit-stgit-goto-popup)
-             ;;
-             (?m  "Mail patches" magit-stgit-mail-popup)
-             ;;
-             (?g  "Refresh"  magit-stgit-refresh-popup)
-             (?r  "Repair"   magit-stgit-repair)
-             (?R  "Rebase"   magit-stgit-rebase-popup)
-             ;;
-             (?z  "Undo"     magit-stgit-undo-popup)
-             (?Z  "Redo"     magit-stgit-redo-popup)))
+(transient-define-prefix magit-stgit-popup
+  "Magit-StGit mod tarnsient popup."
+  ["Patch"
+   [("N" "New" magit-stgit-new-popup)
+    ("n" "Rename" magit-stgit-rename)
+    ("e" "Edit" magit-stgit-edit-popup)
+    ("c" "Commit" magit-stgit-commit-popup)
+    ("C" "Uncommit" magit-stgit-uncommit-popup)
+    ("k" "Delete" magit-stgit-delete-popup)
+    ("\r" "Show" magit-stgit-show)]]
+  ["Series"
+   [("f" "Float" magit-stgit-float-popup)
+    ("s" "Sink" magit-stgit-sink-popup)
+    ("a" "Goto" magit-stgit-goto-popup)
+    ("m" "E-Mail" magit-stgit-mail-popup)]]
+  ["Repository"
+   [("i" "Initalize" magit-stgit-init)
+    ("g" "Refresh" magit-stgit-refresh-popup)
+    ("r" "Repair" magit-stgit-repair)
+    ("R" "Rebase" magit-stgit-rebase-popup)
+    ("z" "Undo" magit-stgit-undo-popup)
+    ("Z" "Redo" magit-stgit-redo-popup)]])
 
 ;;;###autoload
 (defun magit-stgit-init ()
@@ -612,10 +614,8 @@ the To, Cc, and Bcc fields for all patches."
 
 (defvar magit-stgit-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "/" 'magit-stgit-popup)
+    (define-key magit-status-mode-map (kbd magit-stgit-suffix) 'magit-stgit-popup)
     map))
-
-(magit-define-popup-action 'magit-dispatch-popup ?/ "StGit" 'magit-stgit-popup)
 
 ;;;###autoload
 (define-minor-mode magit-stgit-mode
@@ -624,15 +624,15 @@ the To, Cc, and Bcc fields for all patches."
   :keymap  magit-stgit-mode-map
   (unless (derived-mode-p 'magit-mode)
     (user-error "This mode only makes sense with Magit"))
-  (if magit-stgit-mode
-      (progn
-        (magit-add-section-hook 'magit-status-sections-hook
-                                'magit-insert-stgit-series
-                                'magit-insert-stashes t t)
-        (add-hook 'find-file-hook #'magit-stgit-new-check-buffer))
-    (remove-hook 'magit-status-sections-hook
-                 'magit-insert-stgit-series t)
-    (remove-hook 'find-file-hook #'magit-stgit-new-check-buffer))
+  (cond (magit-stgit-mode
+         (magit-add-section-hook 'magit-status-sections-hook
+                                 'magit-insert-stgit-series
+                                 'magit-insert-stashes t t)
+         (add-hook 'find-file-hook #'magit-stgit-new-check-buffer)
+         (transient-append-suffix 'magit-dispatch "%" `(,magit-stgit-suffix "StGit" magit-stgit-popup)))
+        (t
+         (remove-hook 'find-file-hook #'magit-stgit-new-check-buffer)
+         (remove-hook 'magit-status-sections-hook 'magit-insert-stgit-series t)))
   (when (called-interactively-p 'any)
     (magit-refresh)))
 
