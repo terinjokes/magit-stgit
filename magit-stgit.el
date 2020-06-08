@@ -331,13 +331,23 @@ Use ARGS to pass additional arguments."
   (interactive (list (magit-stgit-new-arguments)))
   (magit-run-stgit-async "new" args))
 
-(magit-define-popup magit-stgit-edit-popup
+(transient-define-prefix magit-stgit-edit-popup ()
   "Popup console for StGit edit."
-  'magit-stgit-commands
-  :switches '((?s "Add \"Signed-off-by:\" line" "--sign")
-              (?a "Add \"Acked-by:\" line" "--ack"))
-  :actions  '((?e  "Edit"  magit-stgit-edit))
-  :default-action #'magit-stgit-edit)
+  ["Arguments"
+   (magit-stgit-edit:--line)]
+  ["Actions"
+   ("e" "Edit" magit-stgit-edit)])
+
+(transient-define-argument magit-stgit-edit:--line ()
+  :description "Add trailers:"
+  :class 'transient-switches
+  :key "-t"
+  :argument-format "--%s"
+  :argument-regexp "\\(--\\(ack\\|sign\\|review\\)\\)"
+  :choices '("ack" "sign" "review"))
+
+(defun magit-stgit-edit-arguments ()
+  (transient-args 'magit-stgit-edit-popup))
 
 ;;;###autoload
 (defun magit-stgit-edit (patch &rest args)
