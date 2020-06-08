@@ -357,12 +357,15 @@ Use ARGS to pass additional arguments."
                      (magit-stgit-edit-arguments)))
   (magit-run-stgit-async "edit" "--edit" args "--" patch))
 
-(magit-define-popup magit-stgit-float-popup
-  "Popup console for StGit float."
-  'magit-stgit-commands
-  :switches '((?k "Keep the local changes" "--keep"))
-  :actions  '((?f  "Float"  magit-stgit-float))
-  :default-action #'magit-stgit-float)
+(transient-define-prefix magit-stgit-float-popup ()
+  "Popup console for StGit float"
+  ["Arguments"
+   ("-k" "Keep the local changes" ("-k" "--keep"))]
+  ["Actions"
+   ("f" "Float" magit-stgit-float)])
+
+(defun magit-stgit-float-arguments ()
+  (transient-args 'magit-stgit-float-popup))
 
 ;;;###autoload
 (defun magit-stgit-float (patches &rest args)
