@@ -296,21 +296,39 @@ Else, asks the user for a patch name."
        (string-match-p magit-stgit-new-filename-regexp buffer-file-name)
        (git-commit-setup)))
 
-(magit-define-popup magit-stgit-new-popup
+(transient-define-prefix magit-stgit-new-popup ()
   "Popup console for StGit new."
-  'magit-stgit-commands
-  :switches '((?a "Add \"Acked-by:\" line" "--ack")
-              (?s "Add \"Signed-off-by:\" line" "--sign"))
-  :options  '((?n "Set patch name" ""
-                  (lambda (prompt default) (read-from-minibuffer "Patch name: " default))))
-  :actions  '((?N  "New"  magit-stgit-new))
-  :default-action #'magit-stgit-new)
+  ["Arguments"
+   (magit-stgit-new:--line)
+   ("-v" "Disable commit-msg hook" (nil "--no-verify"))
+   (magit-stgit-new:--name)]
+  ["Actions"
+   ("N" "New" magit-stgit-new)])
+
+(transient-define-argument magit-stgit-new:--line ()
+  :description "Add trailers:"
+  :class 'transient-switches
+  :key "-t"
+  :argument-format "--%s"
+  :argument-regexp "\\(--\\(ack\\|sign\\|review\\)\\)"
+  :choices '("ack" "sign" "review"))
+
+(transient-define-argument magit-stgit-new:--name ()
+  :description "Patch name"
+  :class 'transient-files
+  :key "n"
+  :argument "--"
+  :prompt "Patch name: "
+  :multi-value t)
+
+(defun magit-stgit-new-arguments ()
+  (transient-args 'magit-stgit-new-popup))
 
 ;;;###autoload
 (defun magit-stgit-new (&rest args)
   "Create a new StGit patch.
 Use ARGS to pass additional arguments."
-  (interactive (magit-stgit-new-arguments))
+  (interactive (list (magit-stgit-new-arguments)))
   (magit-run-stgit-async "new" args))
 
 (magit-define-popup magit-stgit-edit-popup
